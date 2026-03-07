@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReadingDepth — Test Page</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Georgia, serif; line-height: 1.7; color: #1a1a1a; background: #fafafa; }
+    .content { max-width: 680px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 { font-size: 1.8rem; margin-bottom: 1rem; }
+    h2 { font-size: 1.3rem; margin: 2rem 0 0.5rem; }
+    p { margin-bottom: 1rem; }
+    .debug-panel {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #111; color: #0f0; font-family: monospace; font-size: 12px;
+      padding: 8px 12px; max-height: 200px; overflow-y: auto;
+      z-index: 100;
+    }
+    .debug-panel summary { cursor: pointer; color: #0f0; }
+    .debug-panel pre { white-space: pre-wrap; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="content" id="prose">
+  <h1>ReadingDepth Test Article</h1>
+
+  <p>This is a test page for the ReadingDepth library. Scroll through this content at different speeds and watch the debug panel below track your paragraph-level absorption.</p>
+
+  <h2>How Reading Speed Works</h2>
+
+  <p>The average adult reads at roughly 238 words per minute for silent reading, according to Brysbaert's 2019 meta-analysis of 190 studies. This number varies by language, text difficulty, and reader expertise, but it gives us a solid baseline for estimating expected read time per paragraph.</p>
+
+  <p>ReadingDepth uses this baseline to compute an absorption ratio: the time you actually spent looking at a paragraph divided by the time a typical reader would need. An absorption of 1.0 means you read at normal pace. Below 0.5 means you probably skimmed. Above 1.5 means you lingered — maybe re-reading, maybe thinking about what you just read.</p>
+
+  <h2>The IntersectionObserver Approach</h2>
+
+  <p>Rather than tracking scroll position and doing geometry math, ReadingDepth uses the browser's IntersectionObserver API with a 50% visibility threshold. A paragraph counts as "being read" when at least half of it is in the viewport. This is more robust than scroll-based tracking because it works correctly with sticky headers, overlapping elements, and CSS transforms.</p>
+
+  <p>The library also handles page visibility changes. If you switch tabs, timers pause. If you come back, they resume. This prevents inflated dwell times from background tabs — a common flaw in simpler scroll-tracking approaches.</p>
+
+  <h2>What Copywriters Care About</h2>
+
+  <p>For content creators, the most actionable signal is the absorption distribution across paragraphs. If readers consistently skim your third paragraph but study your fifth, that tells you something about information density and placement. The skimmed paragraph might be filler, or it might contain important information that needs to be restructured.</p>
+
+  <p>High absorption doesn't always mean good writing. A confusing paragraph gets re-read too. The signal is most useful in aggregate: across many readers, which paragraphs consistently hold attention and which get skipped?</p>
+
+  <h2>Modeling User Learning</h2>
+
+  <p>Reading time at the paragraph level is a proxy for cognitive processing. When combined with content structure metadata — which paragraphs introduce new concepts, which provide examples, which summarize — absorption patterns can model learning depth. A reader who skims the introduction but studies the examples is learning differently from one who reads everything linearly.</p>
+
+  <p>This connects to the broader question of how to measure understanding without interrupting the reader with quizzes or comprehension checks. Passive behavioral signals like dwell time, scroll reversals, and re-visits to earlier paragraphs give us a noisy but non-invasive window into cognitive engagement.</p>
+
+  <h2>Privacy Considerations</h2>
+
+  <p>ReadingDepth reports paragraph IDs (position + first few words) and timing data. It does not capture the full text content, clipboard events, or text selection. When used with PostHog's memory persistence mode, no cookies or localStorage entries are created by the analytics layer itself.</p>
+
+  <p>The paragraph IDs are deterministic — they're derived from position and content, not user identity. Two readers looking at the same article generate the same paragraph IDs, which makes aggregation straightforward without needing to normalize identifiers.</p>
+
+  <p>End of test content. Check the debug panel below for your reading stats.</p>
+</div>
+
+<details class="debug-panel" open>
+  <summary>ReadingDepth Debug</summary>
+  <pre id="debug-output">Initializing...</pre>
+</details>
+
+<script type="module">
+  import { ReadingDepth } from '../src/index.js';
+
+  const debugEl = document.getElementById('debug-output');
+  const rd = new ReadingDepth({
+    flushInterval: 3000, // fast flush for testing
+    onFlush(paragraphs, meta) {
+      const summary = rd.summary();
+      debugEl.textContent = `Flush #${meta.flush_number} | ${paragraphs.length} paragraphs seen\n`
+        + `Overall absorption: ${summary?.overall_absorption ?? '—'}\n`
+        + `Read: ${summary?.paragraphs_read ?? 0} | Skimmed: ${summary?.paragraphs_skimmed ?? 0} | Studied: ${summary?.paragraphs_studied ?? 0}\n\n`
+        + paragraphs
+            .sort((a, b) => a.id.localeCompare(b.id))
+            .map(p => `${p.id.padEnd(30)} ${p.words}w  ${(p.visible_ms/1000).toFixed(1)}s / ${(p.expected_ms/1000).toFixed(1)}s  abs=${p.absorption}`)
+            .join('\n');
+    }
+  });
+
+  rd.observe(document.getElementById('prose'));
+
+  // Final flush on page unload
+  window.addEventListener('beforeunload', () => rd.destroy());
+</script>
+
+</body>
+</html>

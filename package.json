@@ -1,0 +1,15 @@
+{
+  "name": "reading-depth",
+  "version": "0.1.0",
+  "description": "Paragraph-level reading time tracker. Measures absorption, not just visibility.",
+  "main": "dist/reading-depth.js",
+  "module": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "npx serve test"
+  },
+  "keywords": ["analytics", "reading-time", "dwell-time", "content-analytics", "posthog"],
+  "license": "MIT",
+  "devDependencies": {}
+}
