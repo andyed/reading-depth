@@ -1,15 +1,16 @@
 {
-  "name": "reading-depth",
-  "version": "0.1.0",
-  "description": "Paragraph-level reading time tracker. Measures absorption, not just visibility.",
-  "main": "dist/reading-depth.js",
+  "name": "reading-doppler",
+  "version": "0.2.0",
+  "description": "Paragraph-level reading tracker with viewport-band decomposition. As the reader scrolls, each paragraph shifts through top/mid/bot thirds — the ms accumulated in each band is a Doppler-like signature of attention.",
+  "main": "dist/reading-doppler.js",
   "module": "src/index.js",
   "type": "module",
   "scripts": {
     "build": "node build.js",
-    "dev": "npx serve test"
+    "dev": "npx serve test",
+    "test:parity": "node scripts/test_viewport_bands_parity.js && python3 scripts/test_viewport_bands_parity.py"
   },
-  "keywords": ["analytics", "reading-time", "dwell-time", "content-analytics", "posthog"],
+  "keywords": ["analytics", "reading-time", "dwell-time", "content-analytics", "posthog", "viewport-bands"],
   "license": "MIT",
   "devDependencies": {}
 }

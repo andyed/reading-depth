@@ -1,35 +1,47 @@
 /**
  * Minimal build script — wraps ESM source into an IIFE for <script> tag usage.
  * No bundler required.
+ *
+ * Source layout:
+ *   src/viewport-bands.js  — pure helpers (prepended first so its names are
+ *                            in scope for src/index.js)
+ *   src/index.js           — ReadingDoppler class + PostHog adapter
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 mkdirSync('dist', { recursive: true });
 
-const src = readFileSync('src/index.js', 'utf-8');
+function stripModuleSyntax(src) {
+  return src
+    .replace(/^export default /gm, '')
+    .replace(/^export /gm, '')
+    .replace(/^import .+$/gm, '');
+}
 
-// Strip export keywords for IIFE wrapping
-const stripped = src
-  .replace(/^export /gm, '')
-  .replace(/^import .+$/gm, '');
+const bands = stripModuleSyntax(readFileSync('src/viewport-bands.js', 'utf-8'));
+const main = stripModuleSyntax(readFileSync('src/index.js', 'utf-8'));
 
 const iife = `/**
- * ReadingDepth v0.1.0
- * Paragraph-level reading time tracker.
- * https://github.com/andyed/reading-depth
+ * ReadingDoppler v0.2.0
+ * Paragraph-level reading time tracker with viewport-band decomposition.
+ * https://github.com/andyed/reading-doppler
  */
 (function(global) {
   "use strict";
 
-${stripped}
+${bands}
 
-  global.ReadingDepthLib = {
-    ReadingDepth,
+${main}
+
+  global.ReadingDopplerLib = {
+    ReadingDoppler,
     createPostHogAdapter,
+    computeViewportBandsPure,
+    classifyParagraphInViewport,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 `;
 
-writeFileSync('dist/reading-depth.js', iife);
-console.log(`Built dist/reading-depth.js (${(iife.length / 1024).toFixed(1)} KB)`);
+writeFileSync('dist/reading-doppler.js', iife);
+console.log(`Built dist/reading-doppler.js (${(iife.length / 1024).toFixed(1)} KB)`);
