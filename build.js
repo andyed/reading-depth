@@ -12,6 +12,9 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 mkdirSync('dist', { recursive: true });
 
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
+const BUILD_DATE = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
 function stripModuleSyntax(src) {
   return src
     .replace(/^export default /gm, '')
@@ -19,11 +22,22 @@ function stripModuleSyntax(src) {
     .replace(/^import .+$/gm, '');
 }
 
-const bands = stripModuleSyntax(readFileSync('src/viewport-bands.js', 'utf-8'));
-const main = stripModuleSyntax(readFileSync('src/index.js', 'utf-8'));
+// Replace the build-injectable version tokens with real string literals.
+// Run AFTER stripModuleSyntax — the token-bearing lines in src/index.js start
+// with `const RD_VERSION`/`const RD_BUILD`, so the strip regexes don't touch
+// them, and order is not actually load-bearing; we stamp last for clarity.
+// After this runs the built dist must contain NO `__RD_*__` tokens.
+function stamp(src) {
+  return src
+    .replaceAll('__RD_VERSION__', JSON.stringify(pkg.version))
+    .replaceAll('__RD_BUILD__', JSON.stringify(BUILD_DATE));
+}
+
+const bands = stamp(stripModuleSyntax(readFileSync('src/viewport-bands.js', 'utf-8')));
+const main = stamp(stripModuleSyntax(readFileSync('src/index.js', 'utf-8')));
 
 const iife = `/**
- * ReadingDoppler v0.2.0
+ * ReadingDoppler v${pkg.version} (build ${BUILD_DATE})
  * Paragraph-level reading time tracker with viewport-band decomposition.
  * https://github.com/andyed/reading-doppler
  */

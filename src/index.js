@@ -39,6 +39,16 @@ const FLUSH_INTERVAL_MS = 10_000; // report every 10s
 const MIN_VISIBLE_MS = 500; // ignore sub-500ms flickers
 const VIEWPORT_BAND_SCHEMA = 'reading-doppler-vpbands-v1';
 
+// Version stamp. build.js replaces the `__RD_VERSION__` / `__RD_BUILD__`
+// tokens with real literals at build time (the custom string-replace build,
+// not esbuild define). The typeof guard keeps the un-built ESM source safe to
+// import directly (tests, Node consumers): when the tokens are NOT replaced
+// they remain bare identifiers, `typeof` short-circuits to 'undefined', and we
+// fall back to the dev defaults. After a build, e.g. `typeof "0.2.0"` is
+// 'string', so the literal is used. Fallback version must track package.json.
+const RD_VERSION = (typeof __RD_VERSION__ !== 'undefined') ? __RD_VERSION__ : '0.2.0';
+const RD_BUILD = (typeof __RD_BUILD__ !== 'undefined') ? __RD_BUILD__ : 'dev';
+
 export class ReadingDoppler {
   constructor(options = {}) {
     this._wpm = options.wpm || DEFAULT_WPM;
@@ -558,6 +568,8 @@ export function createPostHogAdapter(posthog = window.posthog, options = {}) {
         }));
 
       posthog.capture(`${eventPrefix}_flush`, {
+        reading_doppler_version: RD_VERSION,
+        reading_doppler_build: RD_BUILD,
         flush_number: meta.flush_number,
         paragraphs_seen: paragraphs.length,
         total_visible_ms: Math.round(totalVisible),
@@ -578,7 +590,11 @@ export function createPostHogAdapter(posthog = window.posthog, options = {}) {
 
     onDestroy(summary) {
       if (!summary) return;
-      posthog.capture(`${eventPrefix}_summary`, summary);
+      posthog.capture(`${eventPrefix}_summary`, {
+        ...summary,
+        reading_doppler_version: RD_VERSION,
+        reading_doppler_build: RD_BUILD,
+      });
     }
   };
 }
